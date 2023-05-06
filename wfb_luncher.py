@@ -15,36 +15,30 @@ import click
 
 def main(key,mode,port,wlan,channel,ip,wfbp):
     
-    #subprocess.call(["ifconfig",wlan,"down"])
-    output = subprocess.check_output(["ifconfig",wlan,"down"])
-    print(output)
+    subprocess.run(f"ifconfig {wlan} down",shell=True, check=True)
 
-    #subprocess.call(["iw", "dev", wlan, "set", "monitor", "otherbss"])
-    output = subprocess.check_output(["iw", "dev", wlan, "set", "monitor", "otherbss"])
-    print(output)
+    subprocess.run(f"iw dev {wlan} set monitor otherbss",shell=True, check=True)
 
-    #subprocess.call(["iw","reg","set","BO"])
-    output = subprocess.check_output(["iw","reg","set","BO"])
-    print(output)
+    subprocess.run(f"iw reg set US",shell=True, check=True)
 
-    #subprocess.call(["ifconfig",wlan,"up"])
-    output = subprocess.check_output(["ifconfig",wlan,"up"])
-    print(output)
+    subprocess.run(f"ifconfig {wlan} up",shell=True, check=True)
+
+    subprocess.run(f"iw dev {wlan} set channel {channel} HT20",shell=True, check=True)
     
-    output = subprocess.check_output(["iw","dev",wlan,"set","channel",channel,"HT40+"])
-    print(output)
-    
-    wfb_str=""
-    print(mode)
     if mode=="rx":
-        wfb_str=f"/usr/bin/wfb_rx -p {wfbp} -c {ip} -u {port} -K {key} -i 7669206 {wlan}"
+        wfb_xx=["/usr/bin/wfb_rx","-p",wfbp,"-c",ip,"-u",port,"-K",key,"-i","7669206",wlan]
     elif mode=="tx":
-        wfb_str=f"/usr/bin/wfb_tx -p {wfbp} -u {port} -K {key} -B 20 -G long -S 1 -L 1 -M 1 -k 8 -n 12 -T 0 -i 7669206 {wlan}"        
+        wfb_xx=["/usr/bin/wfb_tx","-p",wfbp,"-u",port,"-K",key,"-B","20","-G","long","-S","1","-L","1","-M","1","-k","8","-n","12","-T","0","-i","7669206",wlan]        
     else:
         print("undefine mode value\n useing default params")
-        wfb_str=f"/usr/bin/wfb_rx -p {wfbp} -c {ip} -u {port} -K {key} -i 7669206 {wlan}"
-    print (wfb_str)
-    subprocess.Popen(['xterm', '-e', wfb_str])
+        wfb_xx=["/usr/bin/wfb_rx","-p",wfbp,"-c",ip,"-u",port,"-K",key,"-i","7669206",wlan]
+        
+    with subprocess.Popen(wfb_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True) as proc:
+            
+        while proc.poll() is None:
+            for line in proc.stdout:
+                print(line, end='')
+        print(proc.returncode)
 
 
 if __name__ == '__main__':
