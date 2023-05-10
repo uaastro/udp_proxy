@@ -47,7 +47,7 @@ def main(ip, port,mpksize,mode):
                       True,box=box.ASCII2)
         delay=delay*1000
         table.add_column("staus line")
-        table.add_row(f"[bold]^X[/] E[yellow]x[/]it pkt:{pkt} pkt/s:{pkts:} delay:{delay:.2f} ms pk_size min:[green]{pk_min}[/] max:[green]{pk_max}[/] avg:[green]{apkt_size}[/] bytes")
+        table.add_row(f"[bold]^X[/] E[yellow]x[/]it pkt:{pkt} pkt/s:{pkts:} delay:{delay:.2f} ms pk_size min:[green]{pk_min}[/] max:[green]{pk_max}[/] avg:[green]{apkt_size:.0f}[/] bytes")
         return table
 
     #------------------------------------------------------------------
@@ -141,7 +141,10 @@ def main(ip, port,mpksize,mode):
                     PACKET_SIZE=len(packet)
                     
                     stream_size+=PACKET_SIZE
-                    apkt_size=stream_size/i
+                    if i!=0:
+                        apkt_size=stream_size/i
+                    else:
+                        apkt_size=0
                     
                     if PACKET_SIZE <=pksize_min:
                         pksize_min=PACKET_SIZE
@@ -158,7 +161,7 @@ def main(ip, port,mpksize,mode):
                     # Выводим информацию о полученном пакете и задержке                       
                     if (time_cp-time_int) >= 1:
                         pkts=i-i_int
-                        live.update(staus_line2(i,pkts,delay_usec,pksize_min,pksize_max,apk_size))
+                        live.update(staus_line2(i,pkts,delay_usec,pksize_min,pksize_max,apkt_size))
                         i_int=i
                         time_int=time_cp
         else:
