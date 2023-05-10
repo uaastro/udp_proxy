@@ -40,14 +40,14 @@ def main(ip, port,mpksize,mode):
         table.add_row(f"[bold]^X[/] E[yellow]x[/]it link_id:{link_id} pkt:{pkt} pkt/s:{pkts:} delay:{delay:.2f} ms pk_size: [green]{pksize}[/] bytes pk_lost:{pk_lost}")
         return table
 
-    def staus_line2(pkt,pkts,delay,pk_min,pk_max) -> Table:
+    def staus_line2(pkt,pkts,delay,pk_min,pk_max,apkt_size) -> Table:
         #table = Table(expand=True,show_header=False,highlight=
         #              True,style="on blue",row_styles=["on blue"],box=None)
         table = Table(expand=True,show_header=False,highlight=
                       True,box=box.ASCII2)
         delay=delay*1000
         table.add_column("staus line")
-        table.add_row(f"[bold]^X[/] E[yellow]x[/]it pkt:{pkt} pkt/s:{pkts:} delay:{delay:.2f} ms pk_size min:[green]{pk_min}[/] max:[green]{pk_max}[/] bytes")
+        table.add_row(f"[bold]^X[/] E[yellow]x[/]it pkt:{pkt} pkt/s:{pkts:} delay:{delay:.2f} ms pk_size min:[green]{pk_min}[/] max:[green]{pk_max}[/] avg:[green]{apkt_size}[/] bytes")
         return table
 
     #------------------------------------------------------------------
@@ -121,8 +121,9 @@ def main(ip, port,mpksize,mode):
                         i_int=i
                         time_int=time_cp
         elif MODE==2:
-            with Live(staus_line2(0,0,0,0,0), refresh_per_second=4) as live:
-                    
+            with Live(staus_line2(0,0,0,0,0,0), refresh_per_second=4) as live:
+                stream_size=0
+                apkt_size=0
                 while True:
                     if select.select([sys.stdin], [], [], 0)[0]:  # проверяем, было ли что-то введено
                         c = sys.stdin.read(1)  # читаем символ
@@ -133,10 +134,15 @@ def main(ip, port,mpksize,mode):
                             rb=i/(time_ls-time_start)
                             live.console.print()
                             live.console.log("pkt: ",i,"\n")
+                            live.console.log("",)
                             break  # если да, выходим из цикла
                     # Получаем пакет и адрес отправителя
                     packet, addr = sock.recvfrom(MAX_PACKET_SIZE)
                     PACKET_SIZE=len(packet)
+                    
+                    stream_size+=PACKET_SIZE
+                    apkt_size=stream_size/i
+                    
                     if PACKET_SIZE <=pksize_min:
                         pksize_min=PACKET_SIZE
                     if PACKET_SIZE>=pksize_max:
@@ -152,7 +158,7 @@ def main(ip, port,mpksize,mode):
                     # Выводим информацию о полученном пакете и задержке                       
                     if (time_cp-time_int) >= 1:
                         pkts=i-i_int
-                        live.update(staus_line2(i,pkts,delay_usec,pksize_min,pksize_max))
+                        live.update(staus_line2(i,pkts,delay_usec,pksize_min,pksize_max,apk_size))
                         i_int=i
                         time_int=time_cp
         else:
