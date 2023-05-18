@@ -2,43 +2,62 @@
 
 import subprocess
 import click
-
+import configparser
+import select
 
 @click.command()
-@click.option('--key', default="/etc/gs.key", help='key (gs.key or drone.key) file default /etc/gs.key')
-@click.option('--mode', default="rx", help='tx/rx mode default rx')
-@click.option('--port', default="5600", help='port of udp outgoing/lossening default 5600')
-@click.option('--wlan', default="wl0", help='wlan adapter default wl0')
-@click.option('--channel', default="161", help='wlan adapter default wl0')
-@click.option('--ip', default="127.0.0.1", help='ip adress of source/destination default 127.0.0.1')
-@click.option('--wfbp', default="0", help='id of wfb pipe default 0')
+@click.option('--conf', default="wfb_config.ini", help='path to config file')
 
-def main(key,mode,port,wlan,channel,ip,wfbp):
+def main(conf):
     
-    subprocess.run(f"ifconfig {wlan} down",shell=True, check=True)
+    config = configparser.ConfigParser()
+    config.read(conf)
+    sections = config.sections()
+    process_list = []
 
-    subprocess.run(f"iw dev {wlan} set monitor otherbss",shell=True, check=True)
-
-    subprocess.run(f"iw reg set US",shell=True, check=True)
-
-    subprocess.run(f"ifconfig {wlan} up",shell=True, check=True)
-
-    subprocess.run(f"iw dev {wlan} set channel {channel} HT20",shell=True, check=True)
-    
-    if mode=="rx":
-        wfb_xx=["/usr/bin/wfb_rx","-p",wfbp,"-c",ip,"-u",port,"-K",key,"-i","7669206",wlan]
-    elif mode=="tx":
-        wfb_xx=["/usr/bin/wfb_tx","-p",wfbp,"-u",port,"-K",key,"-B","20","-G","long","-S","1","-L","1","-M","1","-k","8","-n","12","-T","0","-i","7669206",wlan]        
-    else:
-        print("undefine mode value\n useing default params")
-        wfb_xx=["/usr/bin/wfb_rx","-p",wfbp,"-c",ip,"-u",port,"-K",key,"-i","7669206",wlan]
+    for section in sections:
         
-    with subprocess.Popen(wfb_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True) as proc:
+        if section[:4]=='wlan':
+    
+            wlan=config[section]['wlan']
+            channel=config[section]['channel']
+            subprocess.run(f"ifconfig {wlan} down",shell=True, check=True)
+
+            subprocess.run(f"iw dev {wlan} set monitor otherbss",shell=True, check=True)
+
+            subprocess.run(f"iw reg set US",shell=True, check=True)
+
+            subprocess.run(f"ifconfig {wlan} up",shell=True, check=True)
+
+            subprocess.run(f"iw dev {wlan} set channel {channel} HT20",shell=True, check=True)
+        
+        elif section[:2]=='tx':
+            options=config[section]
+            wfb_xx=["/usr/bin/wfb_tx","-p",options['radio_port'],"-u",options['udp_port'],"-K",options['tx_key'],"-B",options['bandwidth'],"-G",options['G_guard_interval'],"-S",
+                    options['S_stbc'],"-L",options['L_ldpc'],"-M",options['M_mcs_index'],"-k",options['k_RS_K'],"-n",options['n_RS_N'],"-T",options['T_poll_timeout'],
+                    "-i",options['i_link_id'],wlan]
+            process=subprocess.Popen(wfb_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
+            process_list.append(process)
             
-        while proc.poll() is None:
-            for line in proc.stdout:
-                print(line, end='')
-        print(proc.returncode)
+        elif section[:2]=='rx':
+            options=config[section]
+            wfb_xx=["/usr/bin/wfb_rx","-p",options['radio_port'],"-c",options['ip'],"-u",options['udp_port'],"-K",options['rx_key'],"-i",options['i_link_id'],wlan]
+            process=subprocess.Popen(wfb_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
+            process_list.append(process)
+    a=1        
+    ext=False
+
+    fd_list = [process.stdout.fileno() for process in process_list]
+
+    while ext is False:
+        readable, _, _ = select.select(fd_list, [], [])
+        for fd in readable:
+            for process in process_list:
+                if process.stdout.fileno() == fd:
+                    output = process.stdout.readline()
+                    if output:
+                        print(f"[{process.args[0]} {process.args[1]} {process.args[2]}]:", output.strip())
+
 
 
 if __name__ == '__main__':
