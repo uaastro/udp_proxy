@@ -68,7 +68,7 @@ def main(conf):
                     output = process.stdout.readline()
                     if output:
                         print(f"[{process.args[0]} {process.args[1]} {process.args[2]}]:", output.strip())
-                        sock.sendto(output, (UDP_IP, UDP_PORT))
+                        sock.sendto(output.encode("utf-8"), (UDP_IP, UDP_PORT))
 
 
 
