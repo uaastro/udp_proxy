@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+systemctl list-unit-files --type=service | grep enabled
+#wfb_luncher
 
 import subprocess
 import click
@@ -14,46 +15,35 @@ def main(conf):
     config.read(conf)
     sections = config.sections()
     process_list = []
-    
-    UDP_IP = "127.0.0.1"
-    UDP_PORT = 14550
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     for section in sections:
         
         if section[:4]=='wlan':
     
-            wlans=config[section]['wlan'].split()
+            wlan=config[section]['wlan']
             channel=config[section]['channel']
-            
-            for wlan in wlans:
-                subprocess.run(f"ifconfig {wlan} down",shell=True, check=True)
+            subprocess.run(f"ifconfig {wlan} down",shell=True, check=True)
 
-                subprocess.run(f"iw dev {wlan} set monitor otherbss",shell=True, check=True)
+            subprocess.run(f"iw dev {wlan} set monitor otherbss",shell=True, check=True)
 
-                subprocess.run(f"iw reg set US",shell=True, check=True)
+            subprocess.run(f"iw reg set US",shell=True, check=True)
 
-                subprocess.run(f"ifconfig {wlan} up",shell=True, check=True)
+            subprocess.run(f"ifconfig {wlan} up",shell=True, check=True)
 
-                subprocess.run(f"iw dev {wlan} set channel {channel} HT20",shell=True, check=True)
+            subprocess.run(f"iw dev {wlan} set channel {channel} HT20",shell=True, check=True)
         
         elif section[:2]=='tx':
             options=config[section]
             wfb_xx=["/usr/bin/wfb_tx","-p",options['radio_port'],"-u",options['udp_port'],"-K",options['tx_key'],"-B",options['bandwidth'],"-G",options['G_guard_interval'],"-S",
                     options['S_stbc'],"-L",options['L_ldpc'],"-M",options['M_mcs_index'],"-k",options['k_RS_K'],"-n",options['n_RS_N'],"-T",options['T_poll_timeout'],
-                    "-i",options['i_link_id']] + wlans
+                    "-i",options['i_link_id'],wlan]
             process=subprocess.Popen(wfb_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
             process_list.append(process)
             
         elif section[:2]=='rx':
             options=config[section]
-            wfb_xx=["/usr/bin/wfb_rx","-p",options['radio_port'],"-c",options['ip'],"-u",options['udp_port'],"-K",options['rx_key'],"-i",options['i_link_id']]+ wlans
+            wfb_xx=["/usr/bin/wfb_rx","-p",options['radio_port'],"-c",options['ip'],"-u",options['udp_port'],"-K",options['rx_key'],"-i",options['i_link_id'],wlan]
             process=subprocess.Popen(wfb_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
-            process_list.append(process)   
-        elif section[:6]=='udp_tx':
-            options=config[section]
-            udp_xx=["/usr/sbin/udp_proxy/udp_tx","--ip",options['udp_tx_ip'],"--port",options['udp_tx_port'],"--pksize",options['udp_tx_pksize'],"--pks",options['udp_tx_pks'],"--lid",options['udp_tx_lid']]
-            process=subprocess.Popen(udp_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
             process_list.append(process)   
     ext=False
 
@@ -67,7 +57,6 @@ def main(conf):
                     output = process.stdout.readline()
                     if output:
                         print(f"[{process.args[0]} {process.args[1]} {process.args[2]}]:", output.strip())
-                        sock.sendto(output, (UDP_IP, UDP_PORT))
 
 
 

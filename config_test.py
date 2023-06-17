@@ -20,7 +20,16 @@ config['DEFAULT'] = {'rx_key': '/etc/rx.key', #-K
                      'n_RS_N': '12',
                      'T_poll_timeout': '0',
                      'udp_port':'5600',
-                     'ip':'127.0.0.1'
+                     'ip':'127.0.0.1',
+                     'udp_tx_ip':'127.0.0.1',
+                     'udp_tx_port':'5602',
+                     'udp_tx_pksize':'1024',
+                     'udp_tx_pks':'512',
+                     'udp_tx_lid':'1',
+                     'udp_rx_ip':'127.0.0.1',
+                     'udp_rx_port':'5600',
+                     'udp_rx_mpksize':'1536',
+                     'udp_rx_mode':'2'
                      }
 
 
@@ -33,6 +42,12 @@ config['tx_video'] = {'tx_key': '/etc/drone.key', #-K
                       'i_link_id': '7669206', #-i
                       'udp_port':'5602'
                       }
+
+config['udp_tx_test'] = {'udp_tx_ip':'127.0.0.1',
+                         'udp_tx_port':'5602',
+                         'udp_tx_pksize':'1024',
+                         'udp_tx_pks':'512'
+                         }
 
 '''
 config['rx_video'] = {'rx_key': '/etc/gs.key', #-K
@@ -101,3 +116,7 @@ for section in sections:
         options=config[section]
         wfb_xx=["/usr/bin/wfb_rx","-p",options['radio_port'],"-c",options['ip'],"-u",options['udp_port'],"-K",options['rx_key'],"-i",options['i_link_id']]+wlans
         print(wfb_xx)
+    elif section[:6]=='udp_tx':
+            options=config[section]
+            udp_xx=["/usr/sbin/udp_proxy/udp_tx","--ip",options['udp_tx_ip'],"--port",options['udp_tx_port'],"--pksize",options['udp_tx_pksize'],"--pks",options['udp_tx_pks'],"--lid",options['udp_tx_lid']]
+            print(udp_xx)
