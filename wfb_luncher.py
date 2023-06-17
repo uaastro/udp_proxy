@@ -4,6 +4,7 @@ import subprocess
 import click
 import configparser
 import select
+import socket
 
 @click.command()
 @click.option('--conf', default="wfb_config.ini", help='path to config file')
