@@ -15,6 +15,7 @@ def main(conf):
     config.read(conf)
     sections = config.sections()
     process_list = []
+    process_id={}
     
     UDP_IP = "127.0.0.1"
     UDP_PORT = 14550
@@ -45,17 +46,21 @@ def main(conf):
                     "-i",options['i_link_id']] + wlans
             process=subprocess.Popen(wfb_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
             process_list.append(process)
+            process_id[process.pid] = section
             
         elif section[:2]=='rx':
             options=config[section]
             wfb_xx=["/usr/bin/wfb_rx","-p",options['radio_port'],"-c",options['ip'],"-u",options['udp_port'],"-K",options['rx_key'],"-i",options['i_link_id']]+ wlans
             process=subprocess.Popen(wfb_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
-            process_list.append(process)   
+            process_list.append(process)
+            process_id[process.pid] = section
+            
         elif section[:6]=='udp_tx':
             options=config[section]
             udp_xx=["/usr/sbin/udp_proxy/udp_tx","--ip",options['udp_tx_ip'],"--port",options['udp_tx_port'],"--pksize",options['udp_tx_pksize'],"--pks",options['udp_tx_pks'],"--lid",options['udp_tx_lid']]
             process=subprocess.Popen(udp_xx, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
-            process_list.append(process)   
+            process_list.append(process)
+            process_id[process.pid] = section
     ext=False
 
     fd_list = [process.stdout.fileno() for process in process_list]
@@ -67,7 +72,8 @@ def main(conf):
                 if process.stdout.fileno() == fd:
                     output = process.stdout.readline()
                     if output:
-                        print(f"[{process.args[0]} {process.args[1]} {process.args[2]}]:", output.strip())
+                        print(f"[{process_id[process.pid]}]", output.strip())
+                        output = process_id[process.pid] + ' '+ output
                         sock.sendto(output.encode("utf-8"), (UDP_IP, UDP_PORT))
 
 
